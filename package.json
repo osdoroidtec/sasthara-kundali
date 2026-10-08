@@ -1,12 +1,12 @@
 {
   "name": "sasthara-kundali",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@fusionstrings/swiss-eph": "npm:@jsr/fusionstrings__swiss-eph@0.2.1"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "4.149.0"
   }
 }
