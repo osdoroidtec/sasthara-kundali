@@ -8,7 +8,7 @@
     "preview": "wrangler preview"
   },
   "dependencies": {
-    "@fusionstrings/swiss-eph": "0.2.1"
+    "@fusionstrings/swiss-eph": "0.1.1"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
