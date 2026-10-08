@@ -1,8 +1,6 @@
 import { Constants, load } from "@fusionstrings/swiss-eph";
-const ephPromise = Promise.resolve(null);catch(error => {
-  console.error("SWISS_EPH_LOAD_ERROR:", error);
-  throw error;
-});
+
+const ephPromise = Promise.resolve(null);
 
 const SIGNS = [
   "මේෂ", "වෘෂභ", "මිථුන", "කටක", "සිංහ", "කන්‍යා",
@@ -52,11 +50,13 @@ function signIndex(longitude) {
 }
 
 function degreeText(longitude) {
-  let x = ((longitude % 360) + 360) % 360;
-  let d = x % 30;
+  const x = ((longitude % 360) + 360) % 360;
+  const d = x % 30;
+
   const deg = Math.floor(d);
-  const min = Math.floor((d - deg) * 60);
-  const sec = Math.round((((d - deg) * 60) - min) * 60);
+  const minFloat = (d - deg) * 60;
+  const min = Math.floor(minFloat);
+  const sec = Math.round((minFloat - min) * 60);
 
   return `${deg}° ${String(min).padStart(2, "0")}' ${String(sec).padStart(2, "0")}"`;
 }
@@ -64,9 +64,18 @@ function degreeText(longitude) {
 function nakshatra(longitude) {
   const normalized = ((longitude % 360) + 360) % 360;
   const span = 360 / 27;
-  const index = Math.floor(normalized / span);
+
+  const index = Math.min(
+    NAKSHATRAS.length - 1,
+    Math.floor(normalized / span)
+  );
+
   const inside = normalized - index * span;
-  const pada = Math.min(4, Math.floor(inside / (span / 4)) + 1);
+
+  const pada = Math.min(
+    4,
+    Math.floor(inside / (span / 4)) + 1
+  );
 
   return {
     name: NAKSHATRAS[index],
@@ -75,16 +84,39 @@ function nakshatra(longitude) {
 }
 
 function parseLocalDateTime(date, time, timezoneOffset) {
-  const [y, m, d] = date.split("-").map(Number);
-  const [hh, mm] = time.split(":").map(Number);
-
-  if (!y || !m || !d || hh === undefined || mm === undefined) {
+  if (typeof date !== "string" || typeof time !== "string") {
     throw new Error("දිනය හෝ වේලාව වැරදියි.");
   }
 
-  // Convert local time to UTC.
-  const utcMillis = Date.UTC(y, m - 1, d, hh, mm) -
-    Number(timezoneOffset || 5.5) * 60 * 60 * 1000;
+  const dateParts = date.split("-").map(Number);
+  const timeParts = time.split(":").map(Number);
+
+  if (dateParts.length !== 3 || timeParts.length < 2) {
+    throw new Error("දිනය හෝ වේලාව වැරදියි.");
+  }
+
+  const [y, m, d] = dateParts;
+  const [hh, mm] = timeParts;
+
+  if (
+    !Number.isFinite(y) ||
+    !Number.isFinite(m) ||
+    !Number.isFinite(d) ||
+    !Number.isFinite(hh) ||
+    !Number.isFinite(mm)
+  ) {
+    throw new Error("දිනය හෝ වේලාව වැරදියි.");
+  }
+
+  const offset = Number(timezoneOffset ?? 5.5);
+
+  if (!Number.isFinite(offset)) {
+    throw new Error("Timezone offset වැරදියි.");
+  }
+
+  const utcMillis =
+    Date.UTC(y, m - 1, d, hh, mm) -
+    offset * 60 * 60 * 1000;
 
   const utc = new Date(utcMillis);
 
@@ -102,10 +134,14 @@ function parseLocalDateTime(date, time, timezoneOffset) {
 }
 
 async function geocode(place) {
+  if (typeof place !== "string" || !place.trim()) {
+    throw new Error("උපන් ස්ථානය අවශ්‍යයි.");
+  }
+
   const url =
     "https://nominatim.openstreetmap.org/search" +
     "?format=json&limit=1&q=" +
-    encodeURIComponent(place);
+    encodeURIComponent(place.trim());
 
   const response = await fetch(url, {
     headers: {
@@ -119,7 +155,7 @@ async function geocode(place) {
 
   const data = await response.json();
 
-  if (!data.length) {
+  if (!Array.isArray(data) || data.length === 0) {
     throw new Error("උපන් ස්ථානය හමු නොවීය.");
   }
 
@@ -131,7 +167,21 @@ async function geocode(place) {
 }
 
 async function calculate(body) {
+  /*
+   * TEMPORARY TEST:
+   * ephPromise is intentionally null.
+   * This lets us determine whether the current
+   * runtime error happens before Swiss Ephemeris
+   * calculation or inside the calculation.
+   */
+
   const eph = await ephPromise;
+
+  if (!eph) {
+    throw new Error(
+      "Swiss Ephemeris runtime test: load() disabled temporarily."
+    );
+  }
 
   const place = await geocode(body.birth_place);
 
@@ -149,7 +199,6 @@ async function calculate(body) {
     Constants.SE_GREG_CAL
   );
 
-  // Lahiri ayanamsha + sidereal calculations.
   eph.swe_set_sid_mode(
     Constants.SE_SIDM_LAHIRI,
     0,
@@ -164,13 +213,22 @@ async function calculate(body) {
   const planets = [];
 
   for (const [name, id, symbol] of PLANETS) {
-    const result = eph.swe_calc_ut(jd, id, flags);
+    const result = eph.swe_calc_ut(
+      jd,
+      id,
+      flags
+    );
 
-    if (result.returnCode < 0) {
-      throw new Error(`${name} calculation failed: ${result.error}`);
+    if (!result || result.returnCode < 0) {
+      throw new Error(
+        `${name} calculation failed: ${
+          result?.error || "Unknown error"
+        }`
+      );
     }
 
-    const longitude = ((result.xx[0] % 360) + 360) % 360;
+    const longitude =
+      ((result.xx[0] % 360) + 360) % 360;
 
     planets.push({
       name,
@@ -182,20 +240,24 @@ async function calculate(body) {
     });
   }
 
-  // Ketu is opposite Rahu.
-  const rahu = planets.find(p => p.name === "Rahu");
-  const ketuLongitude = (rahu.longitude + 180) % 360;
+  const rahu = planets.find(
+    p => p.name === "Rahu"
+  );
 
-  planets.push({
-    name: "Ketu",
-    symbol: "☋",
-    longitude: ketuLongitude,
-    sign: SIGNS[signIndex(ketuLongitude)],
-    degree: degreeText(ketuLongitude),
-    retrograde: true
-  });
+  if (rahu) {
+    const ketuLongitude =
+      (rahu.longitude + 180) % 360;
 
-   // Sidereal houses / ascendant.
+    planets.push({
+      name: "Ketu",
+      symbol: "☋",
+      longitude: ketuLongitude,
+      sign: SIGNS[signIndex(ketuLongitude)],
+      degree: degreeText(ketuLongitude),
+      retrograde: true
+    });
+  }
+
   const houses = eph.swe_houses(
     jd,
     place.latitude,
@@ -205,8 +267,14 @@ async function calculate(body) {
 
   const ascendant =
     ((houses.ascmc[0] % 360) + 360) % 360;
-  const moon = planets.find(p => p.name === "Moon");
-  const moonNakshatra = nakshatra(moon.longitude);
+
+  const moon = planets.find(
+    p => p.name === "Moon"
+  );
+
+  const moonNakshatra = moon
+    ? nakshatra(moon.longitude)
+    : null;
 
   const houseList = [];
 
@@ -232,7 +300,9 @@ async function calculate(body) {
       place: place.displayName,
       latitude: place.latitude,
       longitude: place.longitude,
-      timezoneOffset: Number(body.timezone_offset || 5.5)
+      timezoneOffset: Number(
+        body.timezone_offset ?? 5.5
+      )
     },
 
     system: {
@@ -248,10 +318,10 @@ async function calculate(body) {
     },
 
     moon: {
-      sign: moon.sign,
-      degree: moon.degree,
-      nakshatra: moonNakshatra.name,
-      pada: moonNakshatra.pada
+      sign: moon?.sign || null,
+      degree: moon?.degree || null,
+      nakshatra: moonNakshatra?.name || null,
+      pada: moonNakshatra?.pada || null
     },
 
     planets,
@@ -262,7 +332,6 @@ async function calculate(body) {
 
 export default {
   async fetch(request) {
-
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: corsHeaders()
@@ -271,7 +340,10 @@ export default {
 
     const url = new URL(request.url);
 
-    if (request.method === "GET" && url.pathname === "/") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/"
+    ) {
       return json({
         ok: true,
         service: "Sasthara Janma Kundali API",
@@ -279,7 +351,10 @@ export default {
       });
     }
 
-    if (request.method === "GET" && url.pathname === "/health") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/health"
+    ) {
       return json({
         status: "healthy"
       });
@@ -293,14 +368,19 @@ export default {
         const body = await request.json();
 
         if (
+          !body ||
           !body.birth_date ||
           !body.birth_time ||
           !body.birth_place
         ) {
-          return json({
-            success: false,
-            error: "උපන් දිනය, වේලාව සහ ස්ථානය අවශ්‍යයි."
-          }, 400);
+          return json(
+            {
+              success: false,
+              error:
+                "උපන් දිනය, වේලාව සහ ස්ථානය අවශ්‍යයි."
+            },
+            400
+          );
         }
 
         const result = await calculate(body);
@@ -308,16 +388,24 @@ export default {
         return json(result);
 
       } catch (error) {
-        return json({
-          success: false,
-          error: error.message || "Calculation failed."
-        }, 500);
+        return json(
+          {
+            success: false,
+            error:
+              error?.message ||
+              "Calculation failed."
+          },
+          500
+        );
       }
     }
 
-    return json({
-      success: false,
-      error: "Not found"
-    }, 404);
+    return json(
+      {
+        success: false,
+        error: "Not found"
+      },
+      404
+    );
   }
 };
