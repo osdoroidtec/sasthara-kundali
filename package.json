@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
-    "preview": "wrangler dev"
+    "preview": "wrangler preview"
   },
   "dependencies": {
-    "@fusionstrings/swisseph-wasi": "0.1.0"
+    "@fusionstrings/swiss-eph": "0.2.1"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
