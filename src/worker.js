@@ -167,14 +167,6 @@ async function geocode(place) {
 }
 
 async function calculate(body) {
-  /*
-   * TEMPORARY TEST:
-   * ephPromise is intentionally null.
-   * This lets us determine whether the current
-   * runtime error happens before Swiss Ephemeris
-   * calculation or inside the calculation.
-   */
-
   const eph = await ephPromise;
 
   if (!eph) {
@@ -332,6 +324,7 @@ async function calculate(body) {
 
 export default {
   async fetch(request) {
+
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: corsHeaders()
