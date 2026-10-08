@@ -1,11 +1,8 @@
-import { Constants, load } from "@fusionstrings/swisseph-wasi";
-const {
-  swe_calc_ut,
-  swe_julday,
-  swe_set_sid_mode,
-  swe_get_ayanamsa_ut,
-  swe_sidtime,
+import { Constants, load } from "@fusionstrings/swiss-eph";
 
+const ephPromise = load();
+
+const {
   SE_GREG_CAL,
   SE_SUN,
   SE_MOON,
@@ -15,13 +12,11 @@ const {
   SE_VENUS,
   SE_SATURN,
   SE_MEAN_NODE,
-
   SE_SIDM_LAHIRI,
-
   SEFLG_SWIEPH,
   SEFLG_SPEED,
   SEFLG_SIDEREAL
-} = SwissEph;
+} = Constants;
 
 const SIGNS = [
   "මේෂ",
@@ -126,21 +121,14 @@ function degreeText(longitude) {
   const min = Math.floor(minFloat);
   const sec = Math.round((minFloat - min) * 60);
 
-  return `${deg}° ${String(min).padStart(2, "0")}' ${String(
-    sec
-  ).padStart(2, "0")}"`;
+  return `${deg}° ${String(min).padStart(2, "0")}' ${String(sec).padStart(2, "0")}"`;
 }
 
 function nakshatra(longitude) {
   const normalized = normalize360(longitude);
-
   const span = 360 / 27;
 
-  const index = Math.min(
-    26,
-    Math.floor(normalized / span)
-  );
-
+  const index = Math.min(26, Math.floor(normalized / span));
   const inside = normalized - index * span;
 
   const pada = Math.min(
@@ -157,72 +145,34 @@ function nakshatra(longitude) {
   };
 }
 
-function parseLocalDateTime(
-  date,
-  time,
-  timezoneOffset
-) {
-  if (
-    typeof date !== "string" ||
-    typeof time !== "string"
-  ) {
-    throw new Error(
-      "දිනය හෝ වේලාව වැරදියි."
-    );
+function parseLocalDateTime(date, time, timezoneOffset) {
+  if (typeof date !== "string" || typeof time !== "string") {
+    throw new Error("දිනය හෝ වේලාව වැරදියි.");
   }
 
-  const dateParts = date
-    .split("-")
-    .map(Number);
+  const dateParts = date.split("-").map(Number);
+  const timeParts = time.split(":").map(Number);
 
-  const timeParts = time
-    .split(":")
-    .map(Number);
-
-  if (
-    dateParts.length !== 3 ||
-    timeParts.length < 2
-  ) {
-    throw new Error(
-      "දිනය හෝ වේලාව වැරදියි."
-    );
+  if (dateParts.length !== 3 || timeParts.length < 2) {
+    throw new Error("දිනය හෝ වේලාව වැරදියි.");
   }
 
   const [y, m, d] = dateParts;
   const [hh, mm] = timeParts;
 
-  if (
-    ![y, m, d, hh, mm].every(
-      Number.isFinite
-    )
-  ) {
-    throw new Error(
-      "දිනය හෝ වේලාව වැරදියි."
-    );
+  if (![y, m, d, hh, mm].every(Number.isFinite)) {
+    throw new Error("දිනය හෝ වේලාව වැරදියි.");
   }
 
-  const offset = Number(
-    timezoneOffset ?? 5.5
-  );
+  const offset = Number(timezoneOffset ?? 5.5);
 
   if (!Number.isFinite(offset)) {
-    throw new Error(
-      "Timezone offset වැරදියි."
-    );
+    throw new Error("Timezone offset වැරදියි.");
   }
 
   const utcMillis =
-    Date.UTC(
-      y,
-      m - 1,
-      d,
-      hh,
-      mm
-    ) -
-    offset *
-      60 *
-      60 *
-      1000;
+    Date.UTC(y, m - 1, d, hh, mm) -
+    offset * 60 * 60 * 1000;
 
   const utc = new Date(utcMillis);
 
@@ -238,13 +188,8 @@ function parseLocalDateTime(
 }
 
 async function geocode(place) {
-  if (
-    typeof place !== "string" ||
-    !place.trim()
-  ) {
-    throw new Error(
-      "උපන් ස්ථානය අවශ්‍යයි."
-    );
+  if (typeof place !== "string" || !place.trim()) {
+    throw new Error("උපන් ස්ථානය අවශ්‍යයි.");
   }
 
   const url =
@@ -254,73 +199,60 @@ async function geocode(place) {
 
   const response = await fetch(url, {
     headers: {
-      "User-Agent":
-        "Sasthara-Kundali/1.0"
+      "User-Agent": "Sasthara-Kundali/1.0"
     }
   });
 
   if (!response.ok) {
-    throw new Error(
-      "උපන් ස්ථානය සොයාගැනීමට නොහැකි විය."
-    );
+    throw new Error("උපන් ස්ථානය සොයාගැනීමට නොහැකි විය.");
   }
 
   const data = await response.json();
 
-  if (
-    !Array.isArray(data) ||
-    data.length === 0
-  ) {
-    throw new Error(
-      "උපන් ස්ථානය හමු නොවීය."
-    );
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("උපන් ස්ථානය හමු නොවීය.");
   }
 
-  const latitude = Number(
-    data[0].lat
-  );
+  const latitude = Number(data[0].lat);
+  const longitude = Number(data[0].lon);
 
-  const longitude = Number(
-    data[0].lon
-  );
-
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude)
-  ) {
-    throw new Error(
-      "උපන් ස්ථානයේ coordinates වැරදියි."
-    );
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("උපන් ස්ථානයේ coordinates වැරදියි.");
   }
 
   return {
     latitude,
     longitude,
-    displayName:
-      data[0].display_name
+    displayName: data[0].display_name
   };
 }
 
 function getPlanetLongitude(result) {
   if (!result) {
-    throw new Error(
-      "Swiss Ephemeris returned empty result."
-    );
+    throw new Error("Swiss Ephemeris returned empty result.");
   }
 
   if (
-    typeof result.longitude ===
-    "number"
+    typeof result.longitude === "number"
   ) {
     return {
       longitude: result.longitude,
       speed:
-        typeof result.speedLongitude ===
-        "number"
-          ? result.speedLongitude
-          : typeof result.speed ===
-            "number"
-          ? result.speed
+        typeof result.longitude_speed === "number"
+          ? result.longitude_speed
+          : 0
+    };
+  }
+
+  if (
+    result.xx &&
+    typeof result.xx[0] === "number"
+  ) {
+    return {
+      longitude: result.xx[0],
+      speed:
+        typeof result.xx[3] === "number"
+          ? result.xx[3]
           : 0
     };
   }
@@ -338,51 +270,16 @@ function getPlanetLongitude(result) {
     };
   }
 
-  if (
-    result.xx &&
-    typeof result.xx[0] ===
-      "number"
-  ) {
-    return {
-      longitude: result.xx[0],
-      speed:
-        typeof result.xx[3] ===
-        "number"
-          ? result.xx[3]
-          : 0
-    };
-  }
-
-  throw new Error(
-    "Swiss Ephemeris result format not recognized."
-  );
+  throw new Error("Swiss Ephemeris result format not recognized.");
 }
 
-/*
-  Tropical ascendant calculation.
+function calculateLagna(jd, latitude, longitude, ayanamsha, eph) {
+  const gstHours = Number(eph.swe_sidtime(jd));
 
-  swe_sidtime() gives Greenwich sidereal
-  time in hours. We add local longitude,
-  calculate tropical ascendant and then
-  subtract Lahiri ayanamsha.
-*/
-function calculateLagna(
-  jd,
-  latitude,
-  longitude,
-  ayanamsha
-) {
-  const gstHours =
-    Number(swe_sidtime(jd));
-
-  const lstHours =
-    gstHours +
-    longitude / 15;
+  const lstHours = gstHours + longitude / 15;
 
   const theta =
-    normalize360(
-      lstHours * 15
-    ) *
+    normalize360(lstHours * 15) *
     Math.PI /
     180;
 
@@ -391,14 +288,7 @@ function calculateLagna(
     Math.PI /
     180;
 
-  /*
-    Mean obliquity of the ecliptic.
-    Good astronomical approximation for
-    natal chart ascendant calculation.
-  */
-  const T =
-    (jd - 2451545.0) /
-    36525;
+  const T = (jd - 2451545.0) / 36525;
 
   const eps =
     (
@@ -410,31 +300,22 @@ function calculateLagna(
     Math.PI /
     180;
 
-  const numerator =
-    -Math.cos(theta);
+  const numerator = -Math.cos(theta);
 
   const denominator =
-    Math.sin(theta) *
-      Math.cos(eps) +
-    Math.tan(latRad) *
-      Math.sin(eps);
+    Math.sin(theta) * Math.cos(eps) +
+    Math.tan(latRad) * Math.sin(eps);
 
   let tropicalAsc =
-    Math.atan2(
-      numerator,
-      denominator
-    ) *
+    Math.atan2(numerator, denominator) *
     180 /
     Math.PI;
 
-  tropicalAsc =
-    normalize360(tropicalAsc);
+  tropicalAsc = normalize360(tropicalAsc);
 
-  const siderealAsc =
-    normalize360(
-      tropicalAsc -
-        Number(ayanamsha)
-    );
+  const siderealAsc = normalize360(
+    tropicalAsc - Number(ayanamsha)
+  );
 
   return {
     tropical: tropicalAsc,
@@ -442,17 +323,12 @@ function calculateLagna(
   };
 }
 
-function calculateWholeSignHouses(
-  ascendant
-) {
-  const lagnaSign =
-    signIndex(ascendant);
-
+function calculateWholeSignHouses(ascendant) {
+  const lagnaSign = signIndex(ascendant);
   const houses = [];
 
   for (let i = 0; i < 12; i++) {
-    const sign =
-      (lagnaSign + i) % 12;
+    const sign = (lagnaSign + i) % 12;
 
     houses.push({
       house: i + 1,
@@ -464,132 +340,88 @@ function calculateWholeSignHouses(
   return houses;
 }
 
-function getHouseFromLongitude(
-  longitude,
-  ascendant
-) {
-  const planetSign =
-    signIndex(longitude);
+function getHouseFromLongitude(longitude, ascendant) {
+  const planetSign = signIndex(longitude);
+  const lagnaSign = signIndex(ascendant);
 
-  const lagnaSign =
-    signIndex(ascendant);
-
-  return (
-    ((planetSign -
-      lagnaSign +
-      12) %
-      12) +
-    1
-  );
+  return ((planetSign - lagnaSign + 12) % 12) + 1;
 }
 
-function calculateVimshottari(
-  moonLongitude
-) {
-  const nk =
-    nakshatra(moonLongitude);
+function calculateVimshottari(moonLongitude) {
+  const nk = nakshatra(moonLongitude);
 
-  const startingIndex =
-    nk.index % 9;
+  const startingIndex = nk.index % 9;
+  const firstLord = DASHA_SEQUENCE[startingIndex];
 
-  const firstLord =
-    DASHA_SEQUENCE[
-      startingIndex
-    ];
-
-  const elapsedFraction =
-    nk.inside / nk.span;
-
-  const remainingFraction =
-    1 - elapsedFraction;
+  const elapsedFraction = nk.inside / nk.span;
+  const remainingFraction = 1 - elapsedFraction;
 
   const firstYears =
-    firstLord[1] *
-    remainingFraction;
+    firstLord[1] * remainingFraction;
 
   const sequence = [];
 
   for (let i = 0; i < 9; i++) {
     const lord =
-      DASHA_SEQUENCE[
-        (startingIndex + i) % 9
-      ];
+      DASHA_SEQUENCE[(startingIndex + i) % 9];
 
     const years =
-      i === 0
-        ? firstYears
-        : lord[1];
+      i === 0 ? firstYears : lord[1];
 
     sequence.push({
       lord: lord[0],
-      years:
-        Number(years.toFixed(4))
+      years: Number(years.toFixed(4))
     });
   }
 
   return {
-    system:
-      "Vimshottari Dasha",
-    nakshatra:
-      nk.name,
-    pada:
-      nk.pada,
-    startingLord:
-      firstLord[0],
-    balanceYears:
-      Number(
-        firstYears.toFixed(4)
-      ),
+    system: "Vimshottari Dasha",
+    nakshatra: nk.name,
+    pada: nk.pada,
+    startingLord: firstLord[0],
+    balanceYears: Number(firstYears.toFixed(4)),
     sequence
   };
 }
 
 async function calculate(body) {
+  const eph = await ephPromise;
+
   if (
-    typeof swe_julday !==
-      "function" ||
-    typeof swe_calc_ut !==
-      "function"
+    !eph ||
+    typeof eph.swe_julday !== "function" ||
+    typeof eph.swe_calc_ut !== "function"
   ) {
     throw new Error(
-      "Swiss Ephemeris WASM functions are not available."
+      "Swiss Ephemeris functions are not available."
     );
   }
 
-  const place =
-    await geocode(
-      body.birth_place
-    );
+  const place = await geocode(body.birth_place);
 
-  const utc =
-    parseLocalDateTime(
-      body.birth_date,
-      body.birth_time,
-      body.timezone_offset
-    );
+  const utc = parseLocalDateTime(
+    body.birth_date,
+    body.birth_time,
+    body.timezone_offset
+  );
 
-  const jd =
-    swe_julday(
-      utc.year,
-      utc.month,
-      utc.day,
-      utc.hour,
-      SE_GREG_CAL
-    );
+  const jd = eph.swe_julday(
+    utc.year,
+    utc.month,
+    utc.day,
+    utc.hour,
+    SE_GREG_CAL
+  );
 
-  /*
-    Lahiri ayanamsha
-  */
-  swe_set_sid_mode(
+  eph.swe_set_sid_mode(
     SE_SIDM_LAHIRI,
     0,
     0
   );
 
-  const ayanamsha =
-    Number(
-      swe_get_ayanamsa_ut(jd)
-    );
+  const ayanamsha = Number(
+    eph.swe_get_ayanamsa_ut(jd)
+  );
 
   const flags =
     SEFLG_SWIEPH |
@@ -598,88 +430,60 @@ async function calculate(body) {
 
   const planets = [];
 
-  for (
-    const [name, id, symbol]
-    of PLANETS
-  ) {
-    const result =
-      swe_calc_ut(
-        jd,
-        id,
-        flags
-      );
+  for (const [name, id, symbol] of PLANETS) {
+    const result = eph.swe_calc_ut(
+      jd,
+      id,
+      flags
+    );
 
     const calculated =
-      getPlanetLongitude(
-        result
-      );
+      getPlanetLongitude(result);
 
     const longitude =
-      normalize360(
-        calculated.longitude
-      );
+      normalize360(calculated.longitude);
 
     planets.push({
       name,
       symbol,
       longitude,
-      sign:
-        SIGNS[
-          signIndex(longitude)
-        ],
-      degree:
-        degreeText(longitude),
+      sign: SIGNS[signIndex(longitude)],
+      degree: degreeText(longitude),
       house: null,
-      retrograde:
-        calculated.speed < 0
+      retrograde: calculated.speed < 0
     });
   }
 
-  const rahu =
-    planets.find(
-      p => p.name === "Rahu"
-    );
+  const rahu = planets.find(
+    p => p.name === "Rahu"
+  );
 
   if (rahu) {
     const ketuLongitude =
-      normalize360(
-        rahu.longitude + 180
-      );
+      normalize360(rahu.longitude + 180);
 
     planets.push({
       name: "Ketu",
       symbol: "☋",
-      longitude:
-        ketuLongitude,
-      sign:
-        SIGNS[
-          signIndex(
-            ketuLongitude
-          )
-        ],
-      degree:
-        degreeText(
-          ketuLongitude
-        ),
+      longitude: ketuLongitude,
+      sign: SIGNS[signIndex(ketuLongitude)],
+      degree: degreeText(ketuLongitude),
       house: null,
       retrograde: true
     });
   }
 
-  const lagna =
-    calculateLagna(
-      jd,
-      place.latitude,
-      place.longitude,
-      ayanamsha
-    );
+  const lagna = calculateLagna(
+    jd,
+    place.latitude,
+    place.longitude,
+    ayanamsha,
+    eph
+  );
 
-  const ascendant =
-    lagna.sidereal;
+  const ascendant = lagna.sidereal;
 
-  for (
-    const planet of planets
-  ) {
+  for (const planet of planets) {
     planet.house =
       getHouseFromLongitude(
         planet.longitude,
@@ -688,170 +492,103 @@ async function calculate(body) {
   }
 
   const houses =
-    calculateWholeSignHouses(
-      ascendant
-    );
+    calculateWholeSignHouses(ascendant);
 
-  const moon =
-    planets.find(
-      p => p.name === "Moon"
-    );
+  const moon = planets.find(
+    p => p.name === "Moon"
+  );
 
-  const moonNakshatra =
-    moon
-      ? nakshatra(
-          moon.longitude
-        )
-      : null;
+  const moonNakshatra = moon
+    ? nakshatra(moon.longitude)
+    : null;
 
-  const dasha =
-    moon
-      ? calculateVimshottari(
-          moon.longitude
-        )
-      : null;
+  const dasha = moon
+    ? calculateVimshottari(moon.longitude)
+    : null;
 
   return {
     success: true,
 
-    name:
-      body.name || "ඔබ",
+    name: body.name || "ඔබ",
 
     birth: {
-      date:
-        body.birth_date,
-      time:
-        body.birth_time,
-      place:
-        place.displayName,
-      latitude:
-        place.latitude,
-      longitude:
-        place.longitude,
+      date: body.birth_date,
+      time: body.birth_time,
+      place: place.displayName,
+      latitude: place.latitude,
+      longitude: place.longitude,
       timezoneOffset:
-        Number(
-          body.timezone_offset ??
-            5.5
-        )
+        Number(body.timezone_offset ?? 5.5)
     },
 
     system: {
-      zodiac:
-        "Sidereal / Vedic",
-      ayanamsha:
-        "Lahiri",
+      zodiac: "Sidereal / Vedic",
+      ayanamsha: "Lahiri",
       ayanamshaValue:
-        Number(
-          ayanamsha.toFixed(6)
-        ),
-      houseSystem:
-        "Whole Sign"
+        Number(ayanamsha.toFixed(6)),
+      houseSystem: "Whole Sign"
     },
 
     lagna: {
-      longitude:
-        ascendant,
-      sign:
-        SIGNS[
-          signIndex(
-            ascendant
-          )
-        ],
-      degree:
-        degreeText(
-          ascendant
-        ),
-      tropicalLongitude:
-        lagna.tropical
+      longitude: ascendant,
+      sign: SIGNS[signIndex(ascendant)],
+      degree: degreeText(ascendant),
+      tropicalLongitude: lagna.tropical
     },
 
     moon: {
-      longitude:
-        moon?.longitude ??
-        null,
-      sign:
-        moon?.sign ??
-        null,
-      degree:
-        moon?.degree ??
-        null,
-      nakshatra:
-        moonNakshatra?.name ??
-        null,
-      pada:
-        moonNakshatra?.pada ??
-        null
+      longitude: moon?.longitude ?? null,
+      sign: moon?.sign ?? null,
+      degree: moon?.degree ?? null,
+      nakshatra: moonNakshatra?.name ?? null,
+      pada: moonNakshatra?.pada ?? null
     },
 
     planets,
-
     houses,
-
     dasha
   };
 }
 
 export default {
   async fetch(request) {
-    if (
-      request.method ===
-      "OPTIONS"
-    ) {
-      return new Response(
-        null,
-        {
-          headers:
-            corsHeaders()
-        }
-      );
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: corsHeaders()
+      });
     }
 
-    const url =
-      new URL(
-        request.url
-      );
+    const url = new URL(request.url);
 
     if (
-      request.method ===
-        "GET" &&
+      request.method === "GET" &&
       url.pathname === "/"
     ) {
       return json({
         ok: true,
-        service:
-          "Sasthara Janma Kundali API",
-        version:
-          "2.0",
-        engine:
-          "Swiss Ephemeris WASM",
-        zodiac:
-          "Sidereal / Lahiri"
+        service: "Sasthara Janma Kundali API",
+        version: "3.0",
+        engine: "Swiss Ephemeris",
+        zodiac: "Sidereal / Lahiri"
       });
     }
 
     if (
-      request.method ===
-        "GET" &&
-      url.pathname ===
-        "/health"
+      request.method === "GET" &&
+      url.pathname === "/health"
     ) {
       return json({
-        status:
-          "healthy",
-        engine:
-          "Swiss Ephemeris WASM"
+        status: "healthy",
+        engine: "Swiss Ephemeris"
       });
     }
 
     if (
-      request.method ===
-        "POST" &&
-      url.pathname ===
-        "/api/kundali"
+      request.method === "POST" &&
+      url.pathname === "/api/kundali"
     ) {
       try {
-        const body =
-          await request.json();
+        const body = await request.json();
 
         if (
           !body ||
@@ -861,8 +598,7 @@ export default {
         ) {
           return json(
             {
-              success:
-                false,
+              success: false,
               error:
                 "උපන් දිනය, වේලාව සහ ස්ථානය අවශ්‍යයි."
             },
@@ -870,19 +606,14 @@ export default {
           );
         }
 
-        const result =
-          await calculate(
-            body
-          );
+        const result = await calculate(body);
 
-        return json(
-          result
-        );
+        return json(result);
+
       } catch (error) {
         return json(
           {
-            success:
-              false,
+            success: false,
             error:
               error?.message ||
               "Calculation failed."
@@ -894,13 +625,10 @@ export default {
 
     return json(
       {
-        success:
-          false,
-        error:
-          "Not found"
+        success: false,
+        error: "Not found"
       },
       404
     );
   }
 };
-// Deploy latest commit
