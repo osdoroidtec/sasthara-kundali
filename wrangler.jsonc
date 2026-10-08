@@ -2,5 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sasthara-kundali-api",
   "main": "src/worker.js",
-  "compatibility_date": "2026-10-08"
+  "compatibility_date": "2026-10-08",
+
+  "alias": {
+    "@deno/shim-deno": "./src/deno-shim.js"
+  }
 }
