@@ -1,4 +1,4 @@
-iimport { Constants, load } from "@fusionstrings/swisseph-wasi";
+import { Constants, load } from "@fusionstrings/swisseph-wasi";
 const {
   swe_calc_ut,
   swe_julday,
