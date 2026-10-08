@@ -1,5 +1,4 @@
-import * as SwissEph from "@fusionstrings/swisseph-wasm";
-
+import * as SwissEph from "@fusionstrings/swisseph-wasm/browser";
 const {
   swe_calc_ut,
   swe_julday,
