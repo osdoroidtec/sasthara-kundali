@@ -1,13 +1,7 @@
-import { Constants, load } from "@fusionstrings/swiss-eph";
-
-let ephPromise = null;
-
-function getEph() {
-  if (!ephPromise) {
-    ephPromise = load();
-  }
-  return ephPromise;
-}
+import {
+  Constants,
+  load
+} from "@fusionstrings/swiss-eph";
 
 const {
   SE_GREG_CAL,
@@ -19,11 +13,23 @@ const {
   SE_VENUS,
   SE_SATURN,
   SE_MEAN_NODE,
+
+  SE_SIDM_LAHIRI,
+
   SEFLG_SWIEPH,
   SEFLG_SPEED,
-  SEFLG_SIDEREAL,
-  SE_SIDM_LAHIRI
+  SEFLG_SIDEREAL
 } = Constants;
+
+let ephPromise;
+
+function getEph() {
+  if (!ephPromise) {
+    ephPromise = load();
+  }
+
+  return ephPromise;
+}
 
 const SIGNS = [
   "මේෂ",
@@ -102,21 +108,29 @@ function corsHeaders() {
 }
 
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...corsHeaders()
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        "Content-Type":
+          "application/json; charset=utf-8",
+        ...corsHeaders()
+      }
     }
-  });
+  );
 }
 
 function normalize360(value) {
-  return ((Number(value) % 360) + 360) % 360;
+  return (
+    ((Number(value) % 360) + 360) % 360
+  );
 }
 
 function signIndex(longitude) {
-  return Math.floor(normalize360(longitude) / 30);
+  return Math.floor(
+    normalize360(longitude) / 30
+  );
 }
 
 function degreeText(longitude) {
@@ -126,13 +140,28 @@ function degreeText(longitude) {
   const deg = Math.floor(d);
   const minFloat = (d - deg) * 60;
   const min = Math.floor(minFloat);
-  const sec = Math.round((minFloat - min) * 60);
 
-  return `${deg}° ${String(min).padStart(2, "0")}' ${String(sec).padStart(2, "0")}"`;
+  let sec = Math.round(
+    (minFloat - min) * 60
+  );
+
+  let finalMin = min;
+
+  if (sec === 60) {
+    sec = 0;
+    finalMin++;
+  }
+
+  if (finalMin === 60) {
+    finalMin = 0;
+  }
+
+  return `${deg}° ${String(finalMin).padStart(2, "0")}' ${String(sec).padStart(2, "0")}"`;
 }
 
 function nakshatra(longitude) {
-  const normalized = normalize360(longitude);
+  const normalized =
+    normalize360(longitude);
 
   const span = 360 / 27;
   const padaSpan = span / 4;
@@ -142,11 +171,14 @@ function nakshatra(longitude) {
     Math.floor(normalized / span)
   );
 
-  const inside = normalized - index * span;
+  const inside =
+    normalized - index * span;
 
   const pada = Math.min(
     4,
-    Math.floor(inside / padaSpan) + 1
+    Math.floor(
+      inside / padaSpan
+    ) + 1
   );
 
   return {
@@ -158,39 +190,55 @@ function nakshatra(longitude) {
   };
 }
 
-function parseLocalDateTime(date, time, timezoneOffset) {
+function parseLocalDateTime(
+  date,
+  time,
+  timezoneOffset
+) {
   if (
     typeof date !== "string" ||
     typeof time !== "string"
   ) {
-    throw new Error("දිනය හෝ වේලාව වැරදියි.");
+    throw new Error(
+      "දිනය හෝ වේලාව වැරදියි."
+    );
   }
 
-  const dateParts = date.split("-").map(Number);
-  const timeParts = time.split(":").map(Number);
+  const dateParts =
+    date.split("-").map(Number);
+
+  const timeParts =
+    time.split(":").map(Number);
 
   if (
     dateParts.length !== 3 ||
     timeParts.length < 2
   ) {
-    throw new Error("දිනය හෝ වේලාව වැරදියි.");
+    throw new Error(
+      "දිනය හෝ වේලාව වැරදියි."
+    );
   }
 
   const [y, m, d] = dateParts;
   const [hh, mm] = timeParts;
 
   if (
-    ![y, m, d, hh, mm].every(Number.isFinite)
+    ![y, m, d, hh, mm].every(
+      Number.isFinite
+    )
   ) {
-    throw new Error("දිනය හෝ වේලාව වැරදියි.");
+    throw new Error(
+      "දිනය හෝ වේලාව වැරදියි."
+    );
   }
 
-  const offset = Number(
-    timezoneOffset ?? 5.5
-  );
+  const offset =
+    Number(timezoneOffset ?? 5.5);
 
   if (!Number.isFinite(offset)) {
-    throw new Error("Timezone offset වැරදියි.");
+    throw new Error(
+      "Timezone offset වැරදියි."
+    );
   }
 
   const utcMillis =
@@ -201,14 +249,24 @@ function parseLocalDateTime(date, time, timezoneOffset) {
       hh,
       mm
     ) -
-    offset * 60 * 60 * 1000;
+    offset *
+      60 *
+      60 *
+      1000;
 
-  const utc = new Date(utcMillis);
+  const utc =
+    new Date(utcMillis);
 
   return {
-    year: utc.getUTCFullYear(),
-    month: utc.getUTCMonth() + 1,
-    day: utc.getUTCDate(),
+    year:
+      utc.getUTCFullYear(),
+
+    month:
+      utc.getUTCMonth() + 1,
+
+    day:
+      utc.getUTCDate(),
+
     hour:
       utc.getUTCHours() +
       utc.getUTCMinutes() / 60 +
@@ -221,19 +279,25 @@ async function geocode(place) {
     typeof place !== "string" ||
     !place.trim()
   ) {
-    throw new Error("උපන් ස්ථානය අවශ්‍යයි.");
+    throw new Error(
+      "උපන් ස්ථානය අවශ්‍යයි."
+    );
   }
 
   const url =
     "https://nominatim.openstreetmap.org/search" +
     "?format=json&limit=1&q=" +
-    encodeURIComponent(place.trim());
+    encodeURIComponent(
+      place.trim()
+    );
 
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Sasthara-Kundali/1.0"
-    }
-  });
+  const response =
+    await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Sasthara-Kundali/1.0"
+      }
+    });
 
   if (!response.ok) {
     throw new Error(
@@ -241,7 +305,8 @@ async function geocode(place) {
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (
     !Array.isArray(data) ||
@@ -252,72 +317,77 @@ async function geocode(place) {
     );
   }
 
-  const latitude = Number(data[0].lat);
-  const longitude = Number(data[0].lon);
+  const latitude =
+    Number(data[0].lat);
+
+  const longitude =
+    Number(data[0].lon);
 
   if (
     !Number.isFinite(latitude) ||
     !Number.isFinite(longitude)
   ) {
     throw new Error(
-      "උපන් ස්ථානයේ coordinates වැරදියි."
+      "Coordinates වැරදියි."
     );
   }
 
   return {
     latitude,
     longitude,
-    displayName: data[0].display_name
+    displayName:
+      data[0].display_name
   };
 }
 
 function getPosition(result) {
   if (!result) {
     throw new Error(
-      "Swiss Ephemeris result එක හිස්."
+      "Swiss Ephemeris result හිස්."
     );
   }
 
   if (
-    typeof result.longitude === "number"
-  ) {
-    return {
-      longitude: result.longitude,
-      speed:
-        typeof result.longitude_speed === "number"
-          ? result.longitude_speed
-          : 0
-    };
-  }
-
-  if (
     result.xx &&
-    typeof result.xx[0] === "number"
+    typeof result.xx[0] ===
+      "number"
   ) {
     return {
-      longitude: result.xx[0],
+      longitude:
+        result.xx[0],
+
       speed:
-        typeof result.xx[3] === "number"
+        typeof result.xx[3] ===
+        "number"
           ? result.xx[3]
-          : 0
+          : 0,
+
+      error:
+        result.error || ""
     };
   }
 
   if (
-    Array.isArray(result) &&
-    typeof result[0] === "number"
+    typeof result.longitude ===
+      "number"
   ) {
     return {
-      longitude: result[0],
+      longitude:
+        result.longitude,
+
       speed:
-        typeof result[3] === "number"
-          ? result[3]
-          : 0
+        typeof result.longitude_speed ===
+        "number"
+          ? result.longitude_speed
+          : 0,
+
+      error:
+        result.error || ""
     };
   }
 
   throw new Error(
-    "Swiss Ephemeris result format එක හඳුනාගත නොහැක."
+    "Swiss Ephemeris result format හඳුනාගත නොහැක."
   );
 }
 
@@ -328,20 +398,21 @@ function calculateLagna(
   longitude,
   ayanamsha
 ) {
-  const gstHours = Number(
-    eph.swe_sidtime(jd)
-  );
+  const gst =
+    Number(
+      eph.swe_sidtime(jd)
+    );
 
-  const lstHours =
-    gstHours + longitude / 15;
+  const lst =
+    gst + longitude / 15;
 
   const theta =
-    normalize360(lstHours * 15) *
+    normalize360(lst * 15) *
     Math.PI /
     180;
 
   const latRad =
-    Number(latitude) *
+    latitude *
     Math.PI /
     180;
 
@@ -359,7 +430,8 @@ function calculateLagna(
     Math.PI /
     180;
 
-  const numerator = -Math.cos(theta);
+  const numerator =
+    -Math.cos(theta);
 
   const denominator =
     Math.sin(theta) *
@@ -367,7 +439,7 @@ function calculateLagna(
     Math.tan(latRad) *
       Math.sin(eps);
 
-  let tropicalAsc =
+  let tropical =
     Math.atan2(
       numerator,
       denominator
@@ -375,44 +447,22 @@ function calculateLagna(
     180 /
     Math.PI;
 
-  tropicalAsc =
-    normalize360(tropicalAsc);
+  tropical =
+    normalize360(tropical);
 
-  const siderealAsc =
+  const sidereal =
     normalize360(
-      tropicalAsc -
-      Number(ayanamsha)
+      tropical -
+      ayanamsha
     );
 
   return {
-    tropical: tropicalAsc,
-    sidereal: siderealAsc
+    tropical,
+    sidereal
   };
 }
 
-function calculateWholeSignHouses(
-  ascendant
-) {
-  const lagnaSign =
-    signIndex(ascendant);
-
-  const houses = [];
-
-  for (let i = 0; i < 12; i++) {
-    const sign =
-      (lagnaSign + i) % 12;
-
-    houses.push({
-      house: i + 1,
-      sign: SIGNS[sign],
-      signIndex: sign
-    });
-  }
-
-  return houses;
-}
-
-function getHouseFromLongitude(
+function houseFromLongitude(
   longitude,
   ascendant
 ) {
@@ -423,32 +473,59 @@ function getHouseFromLongitude(
     signIndex(ascendant);
 
   return (
-    ((planetSign - lagnaSign + 12) % 12) +
+    ((planetSign -
+      lagnaSign +
+      12) %
+      12) +
     1
   );
 }
 
-function calculateVimshottari(
+function calculateHouses(
+  ascendant
+) {
+  const lagna =
+    signIndex(ascendant);
+
+  return Array.from(
+    { length: 12 },
+    (_, i) => {
+      const sign =
+        (lagna + i) % 12;
+
+      return {
+        house: i + 1,
+        sign: SIGNS[sign],
+        signIndex: sign
+      };
+    }
+  );
+}
+
+function calculateDasha(
   moonLongitude
 ) {
   const nk =
-    nakshatra(moonLongitude);
+    nakshatra(
+      moonLongitude
+    );
 
   const startingIndex =
     nk.index % 9;
 
-  const firstLord =
-    DASHA_SEQUENCE[startingIndex];
+  const first =
+    DASHA_SEQUENCE[
+      startingIndex
+    ];
 
-  const elapsedFraction =
+  const elapsed =
     nk.inside / nk.span;
 
-  const remainingFraction =
-    1 - elapsedFraction;
+  const remaining =
+    1 - elapsed;
 
-  const firstYears =
-    firstLord[1] *
-    remainingFraction;
+  const balance =
+    first[1] * remaining;
 
   const sequence = [];
 
@@ -460,31 +537,43 @@ function calculateVimshottari(
 
     const years =
       i === 0
-        ? firstYears
+        ? balance
         : lord[1];
 
     sequence.push({
       lord: lord[0],
-      years: Number(
-        years.toFixed(4)
-      )
+      years:
+        Number(
+          years.toFixed(4)
+        )
     });
   }
 
   return {
-    system: "Vimshottari Dasha",
-    nakshatra: nk.name,
-    pada: nk.pada,
-    startingLord: firstLord[0],
-    balanceYears: Number(
-      firstYears.toFixed(4)
-    ),
+    system:
+      "Vimshottari Dasha",
+
+    nakshatra:
+      nk.name,
+
+    pada:
+      nk.pada,
+
+    startingLord:
+      first[0],
+
+    balanceYears:
+      Number(
+        balance.toFixed(4)
+      ),
+
     sequence
   };
 }
 
 async function calculate(body) {
-  const eph = await getEph();
+  const eph =
+    await getEph();
 
   const place =
     await geocode(
@@ -526,8 +615,11 @@ async function calculate(body) {
   const planets = [];
 
   for (
-    const [name, id, symbol]
-    of PLANETS
+    const [
+      name,
+      id,
+      symbol
+    ] of PLANETS
   ) {
     const result =
       eph.swe_calc_ut(
@@ -536,27 +628,35 @@ async function calculate(body) {
         flags
       );
 
-    const calculated =
+    const p =
       getPosition(result);
 
     const longitude =
       normalize360(
-        calculated.longitude
+        p.longitude
       );
 
     planets.push({
       name,
       symbol,
       longitude,
+
       sign:
         SIGNS[
-          signIndex(longitude)
+          signIndex(
+            longitude
+          )
         ],
+
       degree:
-        degreeText(longitude),
+        degreeText(
+          longitude
+        ),
+
       house: null,
+
       retrograde:
-        calculated.speed < 0
+        p.speed < 0
     });
   }
 
@@ -566,7 +666,7 @@ async function calculate(body) {
     );
 
   if (rahu) {
-    const ketuLongitude =
+    const ketu =
       normalize360(
         rahu.longitude + 180
       );
@@ -574,14 +674,18 @@ async function calculate(body) {
     planets.push({
       name: "Ketu",
       symbol: "☋",
-      longitude: ketuLongitude,
+      longitude: ketu,
+
       sign:
         SIGNS[
-          signIndex(ketuLongitude)
+          signIndex(ketu)
         ],
+
       degree:
-        degreeText(ketuLongitude),
+        degreeText(ketu),
+
       house: null,
+
       retrograde: true
     });
   }
@@ -602,14 +706,14 @@ async function calculate(body) {
     const planet of planets
   ) {
     planet.house =
-      getHouseFromLongitude(
+      houseFromLongitude(
         planet.longitude,
         ascendant
       );
   }
 
   const houses =
-    calculateWholeSignHouses(
+    calculateHouses(
       ascendant
     );
 
@@ -618,14 +722,16 @@ async function calculate(body) {
       p => p.name === "Moon"
     );
 
-  const moonNakshatra =
+  const moonNk =
     moon
-      ? nakshatra(moon.longitude)
+      ? nakshatra(
+          moon.longitude
+        )
       : null;
 
   const dasha =
     moon
-      ? calculateVimshottari(
+      ? calculateDasha(
           moon.longitude
         )
       : null;
@@ -637,53 +743,84 @@ async function calculate(body) {
       body.name || "ඔබ",
 
     birth: {
-      date: body.birth_date,
-      time: body.birth_time,
-      place: place.displayName,
-      latitude: place.latitude,
-      longitude: place.longitude,
+      date:
+        body.birth_date,
+
+      time:
+        body.birth_time,
+
+      place:
+        place.displayName,
+
+      latitude:
+        place.latitude,
+
+      longitude:
+        place.longitude,
+
       timezoneOffset:
         Number(
-          body.timezone_offset ?? 5.5
+          body.timezone_offset ??
+          5.5
         )
     },
 
     system: {
       zodiac:
         "Sidereal / Vedic",
+
       ayanamsha:
         "Lahiri",
+
       ayanamshaValue:
         Number(
           ayanamsha.toFixed(6)
         ),
+
       houseSystem:
         "Whole Sign"
     },
 
     lagna: {
-      longitude: ascendant,
+      longitude:
+        ascendant,
+
       sign:
         SIGNS[
-          signIndex(ascendant)
+          signIndex(
+            ascendant
+          )
         ],
+
       degree:
-        degreeText(ascendant),
+        degreeText(
+          ascendant
+        ),
+
       tropicalLongitude:
         lagna.tropical
     },
 
     moon: {
       longitude:
-        moon?.longitude ?? null,
+        moon?.longitude ??
+        null,
+
       sign:
-        moon?.sign ?? null,
+        moon?.sign ??
+        null,
+
       degree:
-        moon?.degree ?? null,
+        moon?.degree ??
+        null,
+
       nakshatra:
-        moonNakshatra?.name ?? null,
+        moonNk?.name ??
+        null,
+
       pada:
-        moonNakshatra?.pada ?? null
+        moonNk?.pada ??
+        null
     },
 
     planets,
@@ -694,54 +831,71 @@ async function calculate(body) {
 
 export default {
   async fetch(request) {
+
     if (
-      request.method === "OPTIONS"
+      request.method ===
+      "OPTIONS"
     ) {
-      return new Response(null, {
-        headers: corsHeaders()
-      });
+      return new Response(
+        null,
+        {
+          headers:
+            corsHeaders()
+        }
+      );
     }
 
     const url =
-      new URL(request.url);
+      new URL(
+        request.url
+      );
 
     if (
-      request.method === "GET" &&
+      request.method ===
+        "GET" &&
       url.pathname === "/"
     ) {
       return json({
         ok: true,
         service:
           "Sasthara Janma Kundali API",
-        version: "3.0",
+        version: "4.0",
         engine:
-          "Swiss Ephemeris",
+          "Swiss Ephemeris 0.2.1",
         zodiac:
           "Sidereal / Lahiri"
       });
     }
 
     if (
-      request.method === "GET" &&
-      url.pathname === "/health"
+      request.method ===
+        "GET" &&
+      url.pathname ===
+        "/health"
     ) {
       try {
         const eph =
           await getEph();
 
         return json({
-          status: "healthy",
+          status:
+            "healthy",
+
           engine:
             "Swiss Ephemeris",
+
           version:
-            typeof eph.version === "function"
+            typeof eph.version ===
+            "function"
               ? eph.version()
               : "0.2.1"
         });
       } catch (error) {
         return json(
           {
-            status: "error",
+            status:
+              "error",
+
             error:
               error?.message ||
               "Swiss Ephemeris failed"
@@ -752,7 +906,8 @@ export default {
     }
 
     if (
-      request.method === "POST" &&
+      request.method ===
+        "POST" &&
       url.pathname ===
         "/api/kundali"
     ) {
@@ -777,10 +932,16 @@ export default {
         }
 
         const result =
-          await calculate(body);
+          await calculate(
+            body
+          );
 
-        return json(result);
+        return json(
+          result
+        );
+
       } catch (error) {
+
         return json(
           {
             success: false,
@@ -796,7 +957,8 @@ export default {
     return json(
       {
         success: false,
-        error: "Not found"
+        error:
+          "Not found"
       },
       404
     );
