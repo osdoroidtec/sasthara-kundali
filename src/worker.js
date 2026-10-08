@@ -1,5 +1,4 @@
-import { Constants, load } from "@fusionstrings/swiss-eph";
-
+import * as SwissEph from "@fusionstrings/swisseph-wasm";
 const ephPromise = Promise.resolve(null);
 
 const SIGNS = [
