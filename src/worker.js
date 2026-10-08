@@ -192,10 +192,9 @@ async function calculate(body) {
     retrograde: true
   });
 
-  // Sidereal houses / ascendant.
-  const houses = eph.swe_houses_ex(
+   // Sidereal houses / ascendant.
+  const houses = eph.swe_houses(
     jd,
-    Constants.SEFLG_SIDEREAL,
     place.latitude,
     place.longitude,
     "P".charCodeAt(0)
@@ -203,7 +202,6 @@ async function calculate(body) {
 
   const ascendant =
     ((houses.ascmc[0] % 360) + 360) % 360;
-
   const moon = planets.find(p => p.name === "Moon");
   const moonNakshatra = nakshatra(moon.longitude);
 
