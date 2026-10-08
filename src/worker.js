@@ -1,5 +1,8 @@
 import { Constants, load } from "@fusionstrings/swiss-eph";
-const ephPromise = load();
+const ephPromise = load().catch(error => {
+  console.error("SWISS_EPH_LOAD_ERROR:", error);
+  throw error;
+});
 
 const SIGNS = [
   "මේෂ", "වෘෂභ", "මිථුන", "කටක", "සිංහ", "කන්‍යා",
