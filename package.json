@@ -8,8 +8,7 @@
     "preview": "wrangler preview"
   },
   "dependencies": {
-  "@fusionstrings/swisseph-wasm": "0.1.5"
-},
+"@fusionstrings/swisseph-wasi": "0.1.0"},
   "devDependencies": {
     "wrangler": "^4.0.0"
   }
