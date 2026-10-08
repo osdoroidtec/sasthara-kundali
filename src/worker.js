@@ -1,5 +1,5 @@
 import { Constants, load } from "@fusionstrings/swiss-eph";
-const ephPromise = load().catch(error => {
+const ephPromise = Promise.resolve(null);catch(error => {
   console.error("SWISS_EPH_LOAD_ERROR:", error);
   throw error;
 });
