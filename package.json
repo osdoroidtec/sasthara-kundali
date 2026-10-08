@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@fusionstrings/swiss-eph": "npm:@jsr/fusionstrings__swiss-eph@0.2.1"
+    "@fusionstrings/swiss-eph": "jsr:@fusionstrings/swiss-eph@0.2.1"
   },
   "devDependencies": {
     "wrangler": "4.149.0"
